@@ -14,6 +14,7 @@ const App = () => {
     const [uploading, setUploading] = useState(false);
     const [sections, setSections] = useState([]);
     const [pages, setPages] = useState([]); // New state for pages
+    const [sectionSummaries, setSectionSummaries] = useState([]); // Individual section/heading summaries
     const [pdfList, setPdfList] = useState([]);
     const [metadata, setMetadata] = useState(null);
     const [selectedPdf, setSelectedPdf] = useState(null);
@@ -162,6 +163,17 @@ const App = () => {
                                     }];
                                 }
                             });
+                        } else if (data.type === 'section_summary') {
+                            setSectionSummaries(prev => {
+                                const newSummary = {
+                                    id: data.section_id,
+                                    page_number: data.page_num,
+                                    section_title: data.section_title,
+                                    summary: data.summary,
+                                    created_at: new Date().toISOString()
+                                };
+                                return [...prev, newSummary];
+                            });
                         } else if (data.type === 'complete') {
                             fetchPdfList();
                         }
@@ -229,7 +241,9 @@ const App = () => {
             setMetadata(data.pdf);
             setSelectedPdf(data.pdf);
             setSections(data.sections);
+            setSections(data.sections);
             setPages(data.pages || []); // Load pages
+            setSectionSummaries(data.section_summaries || []); // Load section summaries
             setUploading(false);
         } catch (error) {
             console.error("Error loading PDF", error);
@@ -240,7 +254,9 @@ const App = () => {
     const handleNewAnalysis = () => {
         setMetadata(null);
         setSections([]);
+        setSections([]);
         setPages([]);
+        setSectionSummaries([]);
         setFile(null);
         setActiveView('dashboard');
     };
@@ -266,6 +282,7 @@ const App = () => {
                     file={file}
                     sections={sections}
                     pages={pages} // Pass pages
+                    sectionSummaries={sectionSummaries} // Pass section summaries
                     selectedPdf={selectedPdf}
                     fileInputRef={fileInputRef}
                     handleFileChange={handleFileChange}

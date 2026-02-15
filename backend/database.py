@@ -54,6 +54,20 @@ class PageSummary(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     pdf = relationship("PDF", back_populates="pages")
+    section_summaries = relationship("SectionSummary", back_populates="page", cascade="all, delete-orphan")
+
+class SectionSummary(Base):
+    __tablename__ = "section_summaries"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    page_id = Column(Integer, ForeignKey("page_summaries.id"))
+    pdf_id = Column(Integer, ForeignKey("pdfs.id"))
+    page_number = Column(Integer)
+    section_title = Column(String)  # Individual heading (e.g., "3.1. Research question")
+    summary = Column(Text, default="")  # Summary for this specific section
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    page = relationship("PageSummary", back_populates="section_summaries")
 
 def init_db():
     Base.metadata.create_all(bind=engine)

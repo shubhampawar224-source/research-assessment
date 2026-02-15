@@ -5,214 +5,124 @@ An AI-powered web application that automatically summarizes research paper secti
 ![Tech Stack](https://img.shields.io/badge/React-18.2-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-green)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-cyan)
-![Gemini](https://img.shields.io/badge/Gemini-API-purple)
+![Gemini](https://img.shields.io/badge/Gemini-2.0_Flash-purple)
 
 ## ✨ Features
 
-- 📄 **PDF Upload** - Drag & drop or click to upload research papers
-- 🤖 **AI Summarization** - Powered by Google Gemini API
-- ⚡ **Real-time Streaming** - See summaries appear as they're generated
-- 📊 **Live Table Display** - Dynamic updates as sections are processed
-- 🎨 **Premium UI** - Modern glassmorphism design with smooth animations
-- 📱 **Responsive** - Works on desktop, tablet, and mobile
-- 💾 **PDF History** - View previously uploaded documents
+- 📄 **Segregated Summaries** - Automatically splits pages into logical sections (e.g., "1. Introduction", "2.1 Methods").
+- 🤖 **Hybrid Extraction** - Uses Regex for speed + AI for accuracy to detect headers.
+- ⚡ **Real-time Streaming** - Summaries appear instantly via Server-Sent Events (SSE).
+- 📊 **Smart Dashboard** - Separate rows for each section title.
+- 🖼️ **Collapsible Content** - Clean UI that truncates long text by default.
+- 💾 **Persistent Storage** - SQLite database to save all your analyses.
+
+---
+
+## 🚀 Setup Instructions
+
+### Prerequisites
+- **Node.js** 18+ and npm
+- **Python** 3.8+
+- **Google Gemini API Key** ([Get one here](https://aistudio.google.com/app/apikey))
+
+### 1️⃣ Backend Setup
+1. Navigate to the backend folder:
+   ```bash
+   cd backend
+   ```
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   # Windows:
+   venv\Scripts\activate
+   # Mac/Linux:
+   source venv/bin/activate
+   ```
+3. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Set up environment variables:
+   - Create a `.env` file in the `backend/` directory.
+   - Add your API key:
+     ```env
+     GEMINI_API_KEY=your_actual_api_key_here
+     ```
+5. Run the server:
+   ```bash
+   python main.py
+   ```
+   *Server will start at `http://localhost:8000`*
+
+### 2️⃣ Frontend Setup
+1. Open a new terminal and navigate to the frontend folder:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+   *App will run at `http://localhost:5173`*
+
+---
+
+## 🌊 How the Streaming Works
+
+The application uses a sophisticated streaming pipeline to deliver results immediately, rather than waiting for the entire PDF to be processed.
+
+1.  **Chunked Upload**: The PDF is uploaded and processed page-by-page.
+2.  **Hybrid Heading Extraction**:
+    *   **Regex Pass**: The system first scans for standard academic headings (e.g., `1. Introduction`, `IV. Methodology`) using strict regex patterns to ensure speed.
+    *   **AI Fallback**: If regex fails, a lightweight Gemini call analyzes the page layout to identify semantic sections.
+3.  **Segregated Generative Task**:
+    *   Detected headings are used to split the page context.
+    *   Independent calls are made to Gemini to summarize *specific sections* (e.g., "Summarize only the 'Data Collection' part of page 3").
+4.  **SSE Streaming**:
+    *   As each section summary is generated, it is immediately yielded to the frontend via **Server-Sent Events (SSE)**.
+    *   The frontend interprets these events to dynamically append rows to the results table in real-time.
+
+---
+
+## 🧠 Assumptions & Design Decisions
+
+### 1. Granularity over Brevity
+**Design Decision**: Instead of one summary per page, we implemented **Segregated Summaries**.
+*   *Reasoning*: Research papers often contain multiple distinct topics on a single page (e.g., the end of "Related Work" and start of "Methodology"). Summarizing them together loses context. Splitting them into separate table rows provides cleaner, more actionable insights.
+
+### 2. Hybrid Extraction Strategy
+**Design Decision**: We combine Regex with LLM-based extraction.
+*   *Assumption*: Most papers follow standard formatting (Introduction -> Methods -> Results).
+*   *Reasoning*: Regex is near-instant (~0ms), while LLMs take time. We prioritize Regex for 90% of cases and fall back to AI only when necessary, optimizing for both latency and robustness.
+
+### 3. Model Choice (Gemini 2.0 Flash)
+**Assumption**: Speed is critical for a "real-time" feel.
+*   *Decision*: We selected **Gemini 2.0 Flash** because it offers the best balance of extremely low latency and high reasoning capability, essential for processing 10-20 pages quickly without making the user wait.
+
+### 4. Database Persistence
+**Assumption**: Users want to revisit past analyses.
+*   *Decision*: We use **SQLAlchemy + SQLite**. This keeps the deployment simple (no external DB required) while ensuring that once a paper is analyzed, its summaries are saved and don't need to be re-generated.
+
+---
 
 ## 🏗️ Project Structure
 
 ```
 research-paper-summarizer/
-├── frontend/                 # React + Vite + TailwindCSS
-│   ├── src/
-│   │   ├── App.jsx          # Main application component
-│   │   ├── main.jsx         # React entry point
-│   │   └── index.css        # Global styles with TailwindCSS
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── README.md
-│
-└── backend/                  # Python + FastAPI
-    ├── main.py              # FastAPI server with endpoints
-    ├── requirements.txt     # Python dependencies
-    ├── .env.example         # Environment variables template
-    └── README.md
+├── frontend/                 # React + Vite
+│   ├── src/components/       # Dashboard, AllUploads, etc.
+│   └── ...
+└── backend/                  # FastAPI
+    ├── api/v1/               # Routes & Logic
+    │   ├── pdf_routes.py     # Main streaming endpoints
+    │   └── process_help.py   # AI & text processing logic
+    ├── database.py           # SQLite models
+    └── main.py               # Server entry point
 ```
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- **Node.js** 18+ and npm
-- **Python** 3.8+
-- **Google Gemini API Key** ([Get one here](https://makersuite.google.com/app/apikey))
-
-### Backend Setup
-
-1. Navigate to backend directory:
-```bash
-cd backend
-```
-
-2. Create virtual environment:
-```bash
-python -m venv venv
-venv\Scripts\activate  # Windows
-source venv/bin/activate  # Mac/Linux
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Configure environment:
-```bash
-copy .env.example .env  # Windows
-cp .env.example .env    # Mac/Linux
-```
-
-5. Edit `.env` and add your Gemini API key:
-```env
-GEMINI_API_KEY=your_actual_api_key_here
-PORT=8000
-FRONTEND_URL=http://localhost:5173
-```
-
-6. Run the server:
-```bash
-python main.py
-```
-
-Backend will be running at `http://localhost:8000`
-
-### Frontend Setup
-
-1. Navigate to frontend directory:
-```bash
-cd frontend
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start development server:
-```bash
-npm run dev
-```
-
-Frontend will be running at `http://localhost:5173`
-
-## 📖 How It Works
-
-1. **Upload PDF** - User uploads a research paper in PDF format
-2. **Text Extraction** - Backend extracts text using PyPDF2
-3. **Section Detection** - Identifies sections based on common headers (Introduction, Methods, Results, etc.)
-4. **AI Summarization** - Each section is sent to Gemini API for summarization
-5. **Streaming Response** - Summaries are streamed back to frontend in real-time
-6. **Live Display** - Table updates dynamically as summaries arrive
-
-## 🎨 Design Highlights
-
-- **Glassmorphism** - Frosted glass effect with backdrop blur
-- **Gradient Backgrounds** - Purple to blue gradient theme
-- **Smooth Animations** - Fade-in, slide-up, and hover effects
-- **Custom Scrollbar** - Styled to match the theme
-- **Loading States** - Elegant spinners and shimmer effects
-- **Responsive Grid** - Adapts to all screen sizes
-
-## 🔧 API Endpoints
-
-### `POST /upload-pdf`
-Upload a PDF and receive streaming summaries
-
-**Request:**
-- Content-Type: `multipart/form-data`
-- Body: PDF file
-
-**Response:**
-- Server-Sent Events (SSE) stream
-- Returns metadata, section summaries, and completion status
-
-### `GET /pdfs`
-Get list of all uploaded PDFs
-
-**Response:**
-```json
-{
-  "pdfs": [
-    {
-      "id": 1,
-      "filename": "research_paper.pdf",
-      "upload_date": "2026-02-14T17:00:00",
-      "sections_count": 8
-    }
-  ]
-}
-```
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **React 18** - UI library
-- **Vite** - Build tool
-- **TailwindCSS** - Styling
-- **Server-Sent Events** - Real-time updates
-
-### Backend
-- **FastAPI** - Web framework
-- **PyPDF2** - PDF text extraction
-- **Google Gemini API** - AI summarization
-- **Uvicorn** - ASGI server
-- **python-dotenv** - Environment management
-
-## 📝 Example Output
-
-When you upload a research paper, you'll see a table like this:
-
-| Section Title | Summary |
-|--------------|---------|
-| 1. Introduction | Introduces the research problem, background, and motivation... |
-| 2. Related Work | Summarizes previous work and highlights the gap this paper addresses... |
-| 3.1 Dataset Description | Describes the dataset used, including source and preprocessing... |
-| 4. Experimental Setup | Covers training strategy, evaluation metrics, and baseline comparisons... |
-
-## 🔒 Security Notes
-
-- Never commit your `.env` file with actual API keys
-- The `.env.example` file is provided as a template
-- Keep your Gemini API key secure
-
-## 🐛 Troubleshooting
-
-**Backend won't start:**
-- Check if Python virtual environment is activated
-- Verify all dependencies are installed
-- Ensure `.env` file exists with valid API key
-
-**Frontend can't connect to backend:**
-- Verify backend is running on port 8000
-- Check CORS settings in `main.py`
-- Ensure no firewall is blocking the connection
-
-**PDF upload fails:**
-- Check file is a valid PDF
-- Ensure PDF contains extractable text (not scanned images)
-- Verify file size is reasonable
 
 ## 📄 License
-
-This project is created for the Innowhyte Take-Home Assignment.
-
-## 🙏 Acknowledgments
-
-- Google Gemini API for AI-powered summarization
-- FastAPI for the excellent Python web framework
-- React and Vite for modern frontend development
-- TailwindCSS for beautiful, utility-first styling
-
----
-
-**Built with ❤️ for research paper analysis**
+Created for Innowhyte Take-Home Assignment.
