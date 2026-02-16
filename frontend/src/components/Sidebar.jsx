@@ -63,7 +63,7 @@ const Sidebar = ({ activeView, setActiveView, onNewAnalysis }) => {
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg w-full transition-all ${activeView === 'all-uploads' ? 'bg-slate-800 text-blue-400' : 'text-slate-400 hover:bg-slate-800 hover:text-gray-100'}`}
                     >
                         <Icons.History />
-                        <span className="font-medium">All Uploads</span>
+                        <span className="font-medium">All Files</span>
                     </button>
                 </nav>
 
