@@ -153,6 +153,3 @@ research-paper-summarizer/
     ├── database.py           # SQLite models
     └── main.py               # Server entry point
 ```
-
-## 📄 License
-Created for Innowhyte Take-Home Assignment.
