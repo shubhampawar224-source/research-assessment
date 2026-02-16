@@ -1,30 +1,27 @@
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
-from fastapi.responses import StreamingResponse, FileResponse
-from sqlalchemy.orm import Session
-from google import genai
-from google.genai import types
-from PyPDF2 import PdfReader
+
 import os
 import json
-from typing import List, Dict
 import io
-from datetime import datetime
 import uuid
 import sys
 import asyncio
 import traceback
+from google import genai
+from PyPDF2 import PdfReader
+import database as db_module
+from typing import List, Dict
+from datetime import datetime
+from google.genai import types
 from dotenv import load_dotenv
+from fastapi import HTTPException
+from database import PageSummary, SectionSummary
 
 load_dotenv(override=True)
 
 # Configure Gemini API
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "models/gemini-2.0-flash-lite")
-
-
-import database as db_module
-from database import PageSummary, SectionSummary
 
 def extract_text_and_pages_from_pdf(pdf_bytes: bytes) -> tuple[str, int, Dict[str, int]]:
     """Extract text content from PDF and track page numbers for sections"""
@@ -187,8 +184,6 @@ def extract_page_title(page_content: str) -> str:
         # If AI says NONE or response is too long, return empty
         if title.upper() == "NONE" or len(title) > 300:
             return ""
-        
-        print(f"DEBUG: Extracted heading(s) via AI: '{title}'")
         return title
         
     except Exception as e:
@@ -273,20 +268,15 @@ def summarize_page_stream(page_id: int, page_num: int, page_content: str, page_h
 
         summary_parts = []
         chunk_count = 0
-        print("response>>>>",response)
-        print(f"DEBUG: About to start iterating response generator for page {page_num}")
         try:
             for chunk in response:
-                print(f"DEBUG: ENTERED LOOP - Processing chunk for page {page_num}")
                 chunk_count += 1
                 if chunk.text:
-                    print(f"DEBUG: Chunk {chunk_count} received for page {page_num}: {chunk.text[:50]}...") # Debug print
                     summary_parts.append(chunk.text)
                     # Stream each chunk immediately to frontend for real-time display
                     yield f"data: {json.dumps({'page_id': page_id, 'page_num': page_num, 'summary': chunk.text, 'content': page_content[:500], 'streaming': True})}\n\n"
                 else:
                     print(f"DEBUG: Empty chunk {chunk_count} for page {page_num}")
-            print(f"DEBUG: Finished iterating, exited loop for page {page_num}")
         except Exception as loop_error:
             print(f"ERROR: Exception in for loop for page {page_num}: {type(loop_error).__name__}: {str(loop_error)}")
             import traceback
@@ -301,9 +291,7 @@ def summarize_page_stream(page_id: int, page_num: int, page_content: str, page_h
             return
         
         # Update database with complete summary
-        final_summary = ''.join(summary_parts)
-        print(f"DEBUG: Complete summary for page {page_num}: {final_summary[:100]}...")
-        
+        final_summary = ''.join(summary_parts)        
         # Save to database
         with db_module.SessionLocal() as db:
             page = db.query(PageSummary).filter(PageSummary.id == page_id).first()
@@ -325,7 +313,6 @@ def summarize_page_stream(page_id: int, page_num: int, page_content: str, page_h
 
 def generate_section_summaries_stream(page_id: int, pdf_id: int, page_num: int, page_content: str, page_headings: str):
     """Generate individual summaries for each section/heading on a page"""
-    print(f"DEBUG: generate_section_summaries_stream for page {page_num}, headings: '{page_headings}'")
     
     if not page_headings or not page_headings.strip():
         print(f"DEBUG: No headings found for page {page_num}, skipping section summaries")
@@ -333,29 +320,25 @@ def generate_section_summaries_stream(page_id: int, pdf_id: int, page_num: int, 
     
     # Split headings
     headings_list = page_headings.split(" > ")
-    print(f"DEBUG: Found {len(headings_list)} headings to summarize individually")
     
     for idx, heading in enumerate(headings_list):
         heading = heading.strip()
         if not heading:
             continue
-            
-        print(f"DEBUG: Generating summary for section '{heading}'")
         
         # Create prompt for this specific section
         prompt = f"""You are analyzing a research paper. Focus ONLY on the section titled "{heading}" from page {page_num}.
 
-Page Content:
-{page_content[:3000]}
+        Page Content:
+        {page_content[:3000]}
 
-Provide a CONCISE summary (1-2 sentences, maximum 50 words) for ONLY the "{heading}" section.
-Focus on what this specific section discusses.
-
-Rules:
-- 1-2 sentences only
-- Maximum 50 words
-- Focus ONLY on the "{heading}" section
-- Plain text, no formatting"""
+        Provide a CONCISE summary (1-2 sentences, maximum 50 words) for ONLY the "{heading}" section.
+        Focus on what this specific section discusses.
+        Rules:
+        - 1-2 sentences only
+        - Maximum 50 words
+        - Focus ONLY on the "{heading}" section
+        - Plain text, no formatting"""
 
         try:
             response = client.models.generate_content(

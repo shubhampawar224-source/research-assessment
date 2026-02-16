@@ -24,23 +24,7 @@ class PDF(Base):
     sections_count = Column(Integer, default=0)
     total_pages = Column(Integer, default=0)
 
-    sections = relationship("Section", back_populates="pdf", cascade="all, delete-orphan")
     pages = relationship("PageSummary", back_populates="pdf", cascade="all, delete-orphan")
-
-class Section(Base):
-    __tablename__ = "sections"
-
-    id = Column(Integer, primary_key=True, index=True)
-    pdf_id = Column(Integer, ForeignKey("pdfs.id"))
-    section_number = Column(Integer)
-    title = Column(String)
-    summary = Column(Text, default="")
-    content = Column(Text)
-    start_page = Column(Integer, nullable=True)
-    end_page = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    pdf = relationship("PDF", back_populates="sections")
 
 class PageSummary(Base):
     __tablename__ = "page_summaries"

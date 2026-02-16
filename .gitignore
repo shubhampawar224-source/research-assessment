@@ -47,3 +47,8 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Project Specific
+backend/research_papers.db
+backend/uploads/
+*.pdf

@@ -13,10 +13,10 @@ import uuid
 import sys
 import asyncio
 import traceback
-from api.v1.process_help import *
+from helper.process_help import *
 from dotenv import load_dotenv
 import database as db_module
-from database import PDF, Section, PageSummary, SectionSummary, get_db, init_db
+from database import PDF, PageSummary, SectionSummary, get_db, init_db
 
 load_dotenv(override=True)
 
@@ -156,13 +156,11 @@ async def get_pdf_details(pdf_id: int, db: Session = Depends(get_db)):
     if not pdf:
         raise HTTPException(status_code=404, detail="PDF not found")
     
-    sections = db.query(Section).filter(Section.pdf_id == pdf_id).order_by(Section.section_number).all()
     pages = db.query(PageSummary).filter(PageSummary.pdf_id == pdf_id).order_by(PageSummary.page_number).all()
     section_summaries = db.query(SectionSummary).filter(SectionSummary.pdf_id == pdf_id).order_by(SectionSummary.page_number, SectionSummary.id).all()
     
     return {
         "pdf": pdf,
-        "sections": sections,
         "pages": pages,
         "section_summaries": section_summaries
     }
