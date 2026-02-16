@@ -20,6 +20,7 @@ load_dotenv(override=True)
 
 # Configure Gemini API
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "models/gemini-2.0-flash-lite")
 
 
 import database as db_module
@@ -158,20 +159,20 @@ def extract_page_title(page_content: str) -> str:
         # If regex didn't find anything, use AI as fallback
         prompt = f"""Analyze this page from a research paper and extract ALL section and subsection titles/headings.
 
-Page Content (first 1500 chars):
-{page_content[:1500]}
+        Page Content (first 1500 chars):
+        {page_content[:1500]}
 
-Instructions:
-- Extract ALL headings from this page (e.g., "3. Method", "3.1. Research question", "3.2. Participants")
-- Return them separated by " > " (e.g., "3. Method > 3.1. Research question > 3.2. Participants")
-- Preserve numbering and capitalization exactly as they appear
-- If no clear headings are found, return "NONE"
-- Do NOT include any explanation, just the headings or "NONE"
+        Instructions:
+        - Extract ALL headings from this page (e.g., "3. Method", "3.1. Research question", "3.2. Participants")
+        - Return them separated by " > " (e.g., "3. Method > 3.1. Research question > 3.2. Participants")
+        - Preserve numbering and capitalization exactly as they appear
+        - If no clear headings are found, return "NONE"
+        - Do NOT include any explanation, just the headings or "NONE"
 
-Headings:"""
+        Headings:"""
 
         response = client.models.generate_content(
-            model='gemini-2.0-flash-exp',
+            model=GEMINI_MODEL_NAME,
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.1,
@@ -200,20 +201,6 @@ def summarize_page_stream(page_id: int, page_num: int, page_content: str, page_h
     """Generate streaming summary for a page, organized by headings if available"""
     print(f"DEBUG: summarize_page_stream called for page {page_num}, content length: {len(page_content)}, headings: '{page_headings}'")
     try:
-        # if not page_content or len(page_content.strip()) < 50:
-        #      # Handle empty or very short pages (likely scanned or blank)
-        #      msg = "Insufficient text content on this page to summarize (possibly an image or scanned page)."
-        #      yield f"data: {json.dumps({'page_id': page_id, 'page_num': page_num, 'summary': msg})}\n\n"
-             
-        #      with db_module.SessionLocal() as db:
-        #         page = db.query(PageSummary).filter(PageSummary.id == page_id).first()
-        #         if page:
-        #             page.summary = msg
-        #             db.commit()
-             
-        #      yield f"data: {json.dumps({'page_id': page_id, 'page_num': page_num, 'done': True})}\n\n"
-        #      return
-
         # Build prompt based on whether we have headings
         if page_headings and page_headings.strip():
             # We have headings - create structured summary
@@ -221,46 +208,46 @@ def summarize_page_stream(page_id: int, page_num: int, page_content: str, page_h
             headings_formatted = "\n".join([f"- {h}" for h in headings_list])
             
             prompt = f"""You are analyzing page {page_num} of a research paper.
-This page contains the following section(s)/subsection(s):
-{headings_formatted}
+            This page contains the following section(s)/subsection(s):
+            {headings_formatted}
 
-Provide a CONCISE summary organized by these sections. For each section, write 1-2 sentences.
+            Provide a CONCISE summary organized by these sections. For each section, write 1-2 sentences.
 
-Page Content:
-{page_content[:3000]}
+            Page Content:
+            {page_content[:3000]}
 
-Format your response like this:
-[Section Name]: Brief summary (1-2 sentences)
-[Next Section Name]: Brief summary (1-2 sentences)
+            Format your response like this:
+            [Section Name]: Brief summary (1-2 sentences)
+            [Next Section Name]: Brief summary (1-2 sentences)
 
-Rules:
-- Summarize content under each section heading
-- 1-2 sentences per section
-- Maximum 50 words per section
-- Use the exact section names from the list above
-- Plain text only, no extra formatting"""
+            Rules:
+            - Summarize content under each section heading
+            - 1-2 sentences per section
+            - Maximum 50 words per section
+            - Use the exact section names from the list above
+            - Plain text only, no extra formatting"""
         else:
             # No headings - create general summary
             prompt = f"""You are analyzing page {page_num} of a research paper. 
-Provide a VERY CONCISE summary in EXACTLY 2-3 short sentences (maximum 50 words total).
-Focus only on the most important information.
-        
-Page Content:
-{page_content[:3000]}
+            Provide a VERY CONCISE summary in EXACTLY 2-3 short sentences (maximum 50 words total).
+            Focus only on the most important information.
+                    
+            Page Content:
+            {page_content[:3000]}
 
-Rules:
-- Maximum 2-3 sentences
-- Maximum 50 words total
-- No bullet points, no formatting
-- Plain text only
-- Be extremely concise"""
+            Rules:
+            - Maximum 2-3 sentences
+            - Maximum 50 words total
+            - No bullet points, no formatting
+            - Plain text only
+            - Be extremely concise"""
 
         print(f"DEBUG: About to call Gemini API for page {page_num}")
         
         try:
             # Use the correct model format for Python SDK
             response = client.models.generate_content_stream(
-                model='models/gemini-flash-lite-latest',
+                model=GEMINI_MODEL_NAME,
                 contents=prompt,
 
             )
@@ -372,7 +359,7 @@ Rules:
 
         try:
             response = client.models.generate_content(
-                model='gemini-2.0-flash-exp',
+                model=GEMINI_MODEL_NAME,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.3,

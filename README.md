@@ -22,7 +22,7 @@ An AI-powered web application that automatically summarizes research paper secti
 
 ### Prerequisites
 - **Node.js** 18+ and npm
-- **Python** 3.8+
+- **Python** 3.8+ or 3.11
 - **Google Gemini API Key** ([Get one here](https://aistudio.google.com/app/apikey))
 
 ### 1️⃣ Backend Setup
@@ -68,6 +68,19 @@ An AI-powered web application that automatically summarizes research paper secti
    npm run dev
    ```
    *App will run at `http://localhost:5173`*
+
+   *App will run at `http://localhost:5173`*
+
+### 3️⃣ Docker Setup
+You can also run the entire application using Docker Compose.
+
+1. Ensure you have Docker and Docker Compose installed.
+2. Create a `.env` file in the root directory (or ensure `backend/.env` exists) with your `GEMINI_API_KEY`.
+3. Run:
+   ```bash
+   docker-compose up --build
+   ```
+4. Access the app at `http://localhost`.
 
 ---
 

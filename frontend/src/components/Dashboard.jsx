@@ -69,10 +69,10 @@ const Dashboard = ({
                                     <label className="text-xs uppercase tracking-wider text-slate-400">Filename</label>
                                     <p className="font-medium text-gray-200 mt-1 truncate text-sm" title={metadata.filename}>{metadata.filename}</p>
                                 </div>
-                                <div>
+                                {/* <div>
                                     <label className="text-xs uppercase tracking-wider text-slate-400">Sections</label>
                                     <p className="font-medium text-gray-200 mt-1 text-sm">{metadata.sections_count}</p>
-                                </div>
+                                </div> */}
                                 <div>
                                     <label className="text-xs uppercase tracking-wider text-slate-400">Pages</label>
                                     <p className="font-medium text-gray-200 mt-1 text-sm">{metadata.total_pages || '-'}</p>

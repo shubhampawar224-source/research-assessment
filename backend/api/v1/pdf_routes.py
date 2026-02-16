@@ -28,9 +28,6 @@ router = APIRouter()
 # Initialize database tables
 init_db()
 
-# Configure Gemini API
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)

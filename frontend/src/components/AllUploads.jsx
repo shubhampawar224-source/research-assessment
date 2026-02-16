@@ -1,14 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
+import CustomModal from './CustomModal';
 
 // Use environment variable for API URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-const AllUploads = ({ onOpenPdf, onPdfListUpdate }) => {
+const AllUploads = ({ onOpenPdf, onPdfListUpdate, onPdfDeleted }) => {
     const [allPdfs, setAllPdfs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedPdfData, setSelectedPdfData] = useState(null); // { pdf: ..., sections: [] }
+    const [selectedPdfData, setSelectedPdfData] = useState(null);
     const detailsRef = useRef(null);
+
+    // Modal State
+    const [modal, setModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+        onConfirm: null
+    });
+
+    const showModal = (config) => {
+        setModal({ ...config, isOpen: true });
+    };
+
+    const closeModal = () => {
+        setModal(prev => ({ ...prev, isOpen: false }));
+    };
 
     useEffect(() => {
         const fetchPdfs = async () => {
@@ -20,6 +38,11 @@ const AllUploads = ({ onOpenPdf, onPdfListUpdate }) => {
                 }
             } catch (error) {
                 console.error("Error fetching PDFs:", error);
+                showModal({
+                    title: 'Error',
+                    message: 'Failed to load documents. Please check your connection.',
+                    type: 'error'
+                });
             } finally {
                 setLoading(false);
             }
@@ -34,38 +57,74 @@ const AllUploads = ({ onOpenPdf, onPdfListUpdate }) => {
 
     const handlePdfClick = async (id) => {
         try {
-            // Optional: Loading state for details could be added here
             const response = await fetch(`${API_URL}/api/v1/pdfs/${id}`);
             if (response.ok) {
                 const data = await response.json();
                 setSelectedPdfData(data);
-                // Scroll to details
                 setTimeout(() => {
                     detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
                 }, 100);
             }
         } catch (error) {
             console.error("Error fetching PDF details:", error);
+            showModal({
+                title: 'Error',
+                message: 'Failed to load PDF details.',
+                type: 'error'
+            });
         }
     };
 
-    const handleDelete = async (e, id) => {
+    const handleDeleteClick = (e, id) => {
         e.stopPropagation();
-        if (confirm('Are you sure you want to delete this PDF?')) {
-            try {
-                const response = await fetch(`${API_URL}/api/v1/pdfs/${id}`, {
-                    method: 'DELETE',
-                });
-                if (response.ok) {
-                    setAllPdfs(prev => prev.filter(p => p.id !== id));
-                    if (selectedPdfData?.pdf?.id === id) {
-                        setSelectedPdfData(null);
-                    }
-                    if (onPdfListUpdate) onPdfListUpdate(); // Refresh parent list
+        showModal({
+            title: 'Delete Document',
+            message: 'Are you sure you want to delete this PDF? This action cannot be undone.',
+            type: 'confirm',
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            onConfirm: () => executeDelete(id)
+        });
+    };
+
+    const executeDelete = async (id) => {
+        try {
+            const response = await fetch(`${API_URL}/api/v1/pdfs/${id}`, {
+                method: 'DELETE',
+            });
+            if (response.ok) {
+                setAllPdfs(prev => prev.filter(p => p.id !== id));
+                if (selectedPdfData?.pdf?.id === id) {
+                    setSelectedPdfData(null);
                 }
-            } catch (error) {
-                console.error("Error deleting PDF:", error);
+
+                // Trigger parent updates
+                if (onPdfDeleted) {
+                    onPdfDeleted(id);
+                } else if (onPdfListUpdate) {
+                    onPdfListUpdate();
+                }
+
+                // Optional success message
+                /* showModal({
+                    title: 'Deleted',
+                    message: 'Document deleted successfully.',
+                    type: 'success'
+                }); */
+            } else {
+                showModal({
+                    title: 'Error',
+                    message: 'Failed to delete the document.',
+                    type: 'error'
+                });
             }
+        } catch (error) {
+            console.error("Error deleting PDF:", error);
+            showModal({
+                title: 'Error',
+                message: 'An error occurred while deleting.',
+                type: 'error'
+            });
         }
     };
 
@@ -138,7 +197,7 @@ const AllUploads = ({ onOpenPdf, onPdfListUpdate }) => {
                                                 </td>
                                                 <td className="p-4 text-center">
                                                     <button
-                                                        onClick={(e) => handleDelete(e, pdf.id)}
+                                                        onClick={(e) => handleDeleteClick(e, pdf.id)}
                                                         className="text-slate-500 hover:text-red-400 p-2 rounded-lg hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100"
                                                         title="Delete PDF"
                                                     >
@@ -182,10 +241,10 @@ const AllUploads = ({ onOpenPdf, onPdfListUpdate }) => {
                                     <label className="text-xs uppercase tracking-wider text-slate-400">Filename</label>
                                     <p className="font-medium text-gray-200 mt-1 truncate" title={selectedPdfData.pdf.filename}>{selectedPdfData.pdf.filename}</p>
                                 </div>
-                                <div>
+                                {/* <div>
                                     <label className="text-xs uppercase tracking-wider text-slate-400">Sections</label>
                                     <p className="font-medium text-gray-200 mt-1">{selectedPdfData.pdf.sections_count}</p>
-                                </div>
+                                </div> */}
                                 <div>
                                     <label className="text-xs uppercase tracking-wider text-slate-400">Pages</label>
                                     <p className="font-medium text-gray-200 mt-1">{selectedPdfData.pdf.total_pages || '-'}</p>
@@ -285,6 +344,17 @@ const AllUploads = ({ onOpenPdf, onPdfListUpdate }) => {
                     </div>
                 )}
             </div>
+
+            <CustomModal
+                isOpen={modal.isOpen}
+                onClose={closeModal}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                onConfirm={modal.onConfirm}
+                confirmText={modal.confirmText}
+                cancelText={modal.cancelText}
+            />
         </div>
     );
 };

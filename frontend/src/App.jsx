@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import AllUploads from './components/AllUploads';
 import RecentUploads from './components/RecentUploads';
 import PdfViewerModal from './components/PdfViewerModal';
+import CustomModal from './components/CustomModal';
 
 // Use environment variable for API URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -24,6 +25,23 @@ const App = () => {
     const [expandedPdfId, setExpandedPdfId] = useState(null);
     const [expandedPdfSections, setExpandedPdfSections] = useState({});
     const [expandedSectionKey, setExpandedSectionKey] = useState(null);
+
+    // Modal State
+    const [modal, setModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+        onConfirm: null
+    });
+
+    const showModal = (config) => {
+        setModal({ ...config, isOpen: true });
+    };
+
+    const closeModal = () => {
+        setModal(prev => ({ ...prev, isOpen: false }));
+    };
 
     const fileInputRef = useRef(null);
 
@@ -55,7 +73,7 @@ const App = () => {
 
     const handleUpload = async () => {
         if (!file) {
-            alert('Please select a PDF file first');
+            showModal({ title: 'No File Selected', message: 'Please select a PDF file first.', type: 'info' });
             return;
         }
 
@@ -182,7 +200,7 @@ const App = () => {
             }
         } catch (error) {
             console.error('Error uploading PDF:', error);
-            alert('Error uploading PDF. Please try again.');
+            showModal({ title: 'Upload Failed', message: 'Error uploading PDF. Please check your connection and try again.', type: 'error' });
         } finally {
             setUploading(false);
         }
@@ -195,7 +213,7 @@ const App = () => {
         if (selectedFile && selectedFile.type === 'application/pdf') {
             setFile(selectedFile);
         } else {
-            alert('Please select a valid PDF file');
+            showModal({ title: 'Invalid File', message: 'Please select a valid PDF file.', type: 'error' });
         }
     };
 
@@ -266,8 +284,23 @@ const App = () => {
         setPdfViewerUrl(null);
     };
 
+    const handlePdfDeleted = (deletedId) => {
+        // Refresh the list
+        fetchPdfList();
+
+        // If the deleted PDF is the one currently loaded on the dashboard
+        if (metadata && metadata.id === deletedId) {
+            handleNewAnalysis();
+        }
+
+        // If it was selected
+        if (selectedPdf && selectedPdf.id === deletedId) {
+            setSelectedPdf(null);
+        }
+    };
+
     return (
-        <div className="flex h-screen bg-[#0f172a] text-gray-100 overflow-hidden font-sans">
+        <div className="flex flex-col md:flex-row h-screen bg-[#0f172a] text-gray-100 overflow-hidden font-sans">
 
             <Sidebar
                 activeView={activeView}
@@ -291,7 +324,7 @@ const App = () => {
                     setFile={setFile}
                 />
             ) : (
-                <AllUploads onOpenPdf={loadPdfToMain} onPdfListUpdate={fetchPdfList} />
+                <AllUploads onOpenPdf={loadPdfToMain} onPdfListUpdate={fetchPdfList} onPdfDeleted={handlePdfDeleted} />
             )}
 
             {activeView === 'dashboard' && (
@@ -312,6 +345,17 @@ const App = () => {
                     closePdfModal={closePdfModal}
                 />
             )}
+
+            <CustomModal
+                isOpen={modal.isOpen}
+                onClose={closeModal}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                onConfirm={modal.onConfirm}
+                confirmText={modal.confirmText || 'OK'}
+                cancelText={modal.cancelText || 'Cancel'}
+            />
         </div>
     );
 };
