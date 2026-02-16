@@ -22,7 +22,7 @@ client = OpenAI(
     api_key=os.getenv("GROK_API_KEY"),
     base_url="https://api.groq.com/openai/v1",
 )
-GROK_MODEL_NAME = os.getenv("GROK_MODEL_NAME", "grok-2-latest")
+GROK_MODEL_NAME = os.getenv("GROK_MODEL_NAME", "openai/gpt-oss-20b")
 
 def extract_text_and_pages_from_pdf(pdf_bytes: bytes) -> tuple[str, int, Dict[str, int]]:
     """Extract text content from PDF and track page numbers for sections"""
