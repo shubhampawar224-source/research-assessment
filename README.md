@@ -23,7 +23,7 @@ An AI-powered web application that automatically summarizes research paper secti
 ### Prerequisites
 - **Node.js** 18+ and npm
 - **Python** 3.8+ or 3.11
-- **Google Gemini API Key** ([Get one here](https://aistudio.google.com/app/apikey))
+- **Grok API Key** ([Get one here](https://api.groq.com/openai/v1))
 
 ### 1️⃣ Backend Setup
 1. Navigate to the backend folder:
@@ -46,7 +46,7 @@ An AI-powered web application that automatically summarizes research paper secti
    - Create a `.env` file in the `backend/` directory.
    - Add your API key:
      ```env
-     GEMINI_API_KEY=your_actual_api_key_here
+     GROK_API_KEY=your_xai_api_key_here
      ```
 5. Run the server:
    ```bash
@@ -80,7 +80,7 @@ Run the entire application in production mode using Docker Compose.
 2. **Configuration:**
    - Create a `.env` file in the root directory with your API key:
      ```env
-     GEMINI_API_KEY=your_actual_api_key_here
+     GROK_API_KEY=your_xai_api_key_here
      ```
 
 3. **Start the Application:**
@@ -128,9 +128,11 @@ The application uses a sophisticated streaming pipeline to deliver results immed
 *   *Assumption*: Most papers follow standard formatting (Introduction -> Methods -> Results).
 *   *Reasoning*: Regex is near-instant (~0ms), while LLMs take time. We prioritize Regex for 90% of cases and fall back to AI only when necessary, optimizing for both latency and robustness.
 
-### 3. Model Choice (Gemini 2.0 Flash-Lite)
+- **Grok API (xAI)** - AI-powered summarization
+
+### 3. Model Choice (Grok-2)
 **Assumption**: Speed is critical for a "real-time" feel.
-*   *Decision*: We selected **Gemini 2.0 Flash-Lite** because it offers the best balance of extremely low latency and high reasoning capability, essential for processing 10-20 pages quickly without making the user wait.
+*   *Decision*: We selected **Grok-2** (via xAI) because it offers excellent reasoning capabilities and low latency, essential for processing research papers efficiently.
 
 ### 4. Database Persistence
 **Assumption**: Users want to revisit past analyses.

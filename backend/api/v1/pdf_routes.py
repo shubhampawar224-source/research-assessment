@@ -1,8 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy.orm import Session
-from google import genai
-from google.genai import types
+
 from PyPDF2 import PdfReader
 import os
 import json

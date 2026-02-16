@@ -10,7 +10,7 @@ load_dotenv()
 # Create FastAPI app
 app = FastAPI(
     title="Research Paper Summarizer API",
-    description="AI-powered research paper section summarization using Google Gemini",
+    description="AI-powered research paper section summarization using Grok API",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -56,7 +56,7 @@ async def health_check():
     return {
         "status": "healthy",
         "api_version": "1.0.0",
-        "gemini_configured": bool(os.getenv("GEMINI_API_KEY"))
+        "grok_configured": bool(os.getenv("GROK_API_KEY"))
     }
 
 

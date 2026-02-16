@@ -1,5 +1,4 @@
 
-
 import os
 import json
 import io
@@ -7,21 +6,23 @@ import uuid
 import sys
 import asyncio
 import traceback
-from google import genai
+from openai import OpenAI
 from PyPDF2 import PdfReader
 import database as db_module
 from typing import List, Dict
 from datetime import datetime
-from google.genai import types
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from database import PageSummary, SectionSummary
 
 load_dotenv(override=True)
 
-# Configure Gemini API
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "models/gemini-2.0-flash-lite")
+# Configure Grok API (via OpenAI client)
+client = OpenAI(
+    api_key=os.getenv("GROK_API_KEY"),
+    base_url="https://api.groq.com/openai/v1",
+)
+GROK_MODEL_NAME = os.getenv("GROK_MODEL_NAME", "openai/gpt-oss-20b")
 
 def extract_text_and_pages_from_pdf(pdf_bytes: bytes) -> tuple[str, int, Dict[str, int]]:
     """Extract text content from PDF and track page numbers for sections"""
@@ -168,16 +169,17 @@ def extract_page_title(page_content: str) -> str:
 
         Headings:"""
 
-        response = client.models.generate_content(
-            model=GEMINI_MODEL_NAME,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=150
-            )
+        response = client.chat.completions.create(
+            model=GROK_MODEL_NAME,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that extracts headings from research papers."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=150
         )
         
-        title = response.text.strip()
+        title = response.choices[0].message.content.strip()
         # Clean up the response
         title = title.replace('"', '').replace("'", '').strip()
         
@@ -237,24 +239,23 @@ def summarize_page_stream(page_id: int, page_num: int, page_content: str, page_h
             - Plain text only
             - Be extremely concise"""
 
-        print(f"DEBUG: About to call Gemini API for page {page_num}")
+        print(f"DEBUG: About to call Grok API for page {page_num}")
         
         try:
-            # Use the correct model format for Python SDK
-            response = client.models.generate_content_stream(
-                model=GEMINI_MODEL_NAME,
-                contents=prompt,
-
+            # Use OpenAI compatible client for Grok
+            response = client.chat.completions.create(
+                model=GROK_MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": "You are a helpful research assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                stream=True
             )
-            print(f"DEBUG: Gemini API call successful for page {page_num}, starting to read chunks")
+            print(f"DEBUG: Grok API call successful for page {page_num}, starting to read chunks")
         except Exception as api_error:
-            print(f"ERROR: Gemini API call failed for page {page_num}: {str(api_error)}")
+            print(f"ERROR: Grok API call failed for page {page_num}: {str(api_error)}")
             
-            # Check if it's a quota error
-            if "RESOURCE_EXHAUSTED" in str(api_error) or "Quota exceeded" in str(api_error):
-                error_msg = "⚠️ API quota exceeded. Please wait or upgrade your plan."
-            else:
-                error_msg = f"❌ Summary generation failed: {str(api_error)[:100]}"
+            error_msg = f"❌ Summary generation failed: {str(api_error)[:100]}"
             
             with db_module.SessionLocal() as db:
                 page = db.query(PageSummary).filter(PageSummary.id == page_id).first()
@@ -271,12 +272,14 @@ def summarize_page_stream(page_id: int, page_num: int, page_content: str, page_h
         try:
             for chunk in response:
                 chunk_count += 1
-                if chunk.text:
-                    summary_parts.append(chunk.text)
+                content_delta = chunk.choices[0].delta.content
+                if content_delta:
+                    summary_parts.append(content_delta)
                     # Stream each chunk immediately to frontend for real-time display
-                    yield f"data: {json.dumps({'page_id': page_id, 'page_num': page_num, 'summary': chunk.text, 'content': page_content[:500], 'streaming': True})}\n\n"
+                    yield f"data: {json.dumps({'page_id': page_id, 'page_num': page_num, 'summary': content_delta, 'content': page_content[:500], 'streaming': True})}\n\n"
                 else:
-                    print(f"DEBUG: Empty chunk {chunk_count} for page {page_num}")
+                    # Keepalive or empty chunk
+                    pass
         except Exception as loop_error:
             print(f"ERROR: Exception in for loop for page {page_num}: {type(loop_error).__name__}: {str(loop_error)}")
             import traceback
@@ -341,16 +344,17 @@ def generate_section_summaries_stream(page_id: int, pdf_id: int, page_num: int, 
         - Plain text, no formatting"""
 
         try:
-            response = client.models.generate_content(
-                model=GEMINI_MODEL_NAME,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.3,
-                    max_output_tokens=100
-                )
+            response = client.chat.completions.create(
+                model=GROK_MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": "You are a helpful research assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=100
             )
             
-            section_summary = response.text.strip()
+            section_summary = response.choices[0].message.content.strip()
             print(f"DEBUG: Generated summary for '{heading}': {section_summary[:80]}...")
             
             # Store in database

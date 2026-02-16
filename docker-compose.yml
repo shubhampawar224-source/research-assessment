@@ -8,8 +8,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GEMINI_MODEL_NAME=${GEMINI_MODEL_NAME:-models/gemini-2.0-flash-lite}
+      - GROK_API_KEY=${GROK_API_KEY}
+      - GROK_MODEL_NAME=${GROK_MODEL_NAME:-grok-2-latest}
       - PORT=8000
     volumes:
       - ./backend/uploads:/app/uploads
