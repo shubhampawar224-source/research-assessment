@@ -23,7 +23,7 @@ An AI-powered web application that automatically summarizes research paper secti
 ### Prerequisites
 - **Node.js** 18+ and npm
 - **Python** 3.8+ or 3.11
-- **Grok API Key** ([Get one here](https://console.x.ai/))
+- **Grok API Key** ([Get one here](https://api.groq.com/openai/v1))
 
 ### 1️⃣ Backend Setup
 1. Navigate to the backend folder:
