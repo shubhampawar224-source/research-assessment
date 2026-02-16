@@ -1,5 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Icons from '../helpers/Icons';
+
+const ExpandableText = ({ text, maxLines = 3 }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    if (!text) return null;
+
+    // Heuristic: If text is short, don't show toggle. 
+    // Assuming ~60 chars per line, 3 lines = 180 chars. 
+    // We'll use 150 to be safe or just rely on visual clamping?
+    // Visual clamping with CSS line-clamp-3 is consistent. 
+    // The button shows if text length > 150.
+    const showToggle = text.length > 150;
+
+    return (
+        <div className="flex flex-col items-start">
+            <div
+                className={`text-gray-300 text-xs leading-relaxed transition-all duration-300 ${expanded ? '' : 'line-clamp-3'}`}
+                title={!expanded ? text : ''}
+            >
+                {text}
+            </div>
+            {showToggle && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+                    className="text-[10px] text-blue-400 hover:text-blue-300 mt-1 font-medium hover:underline focus:outline-none opacity-80 hover:opacity-100"
+                >
+                    {expanded ? 'Collapse' : 'Show more'}
+                </button>
+            )}
+        </div>
+    );
+};
 
 const Dashboard = ({
     metadata,
@@ -12,7 +44,8 @@ const Dashboard = ({
     handleFileChange,
     handleUpload,
     openPdfAtPage,
-    setFile
+    setFile,
+    sectionSummaries
 }) => {
     return (
         <main className="flex-1 flex flex-col relative overflow-hidden">
@@ -36,10 +69,10 @@ const Dashboard = ({
                                     <label className="text-xs uppercase tracking-wider text-slate-400">Filename</label>
                                     <p className="font-medium text-gray-200 mt-1 truncate text-sm" title={metadata.filename}>{metadata.filename}</p>
                                 </div>
-                                <div>
+                                {/* <div>
                                     <label className="text-xs uppercase tracking-wider text-slate-400">Sections</label>
                                     <p className="font-medium text-gray-200 mt-1 text-sm">{metadata.sections_count}</p>
-                                </div>
+                                </div> */}
                                 <div>
                                     <label className="text-xs uppercase tracking-wider text-slate-400">Pages</label>
                                     <p className="font-medium text-gray-200 mt-1 text-sm">{metadata.total_pages || '-'}</p>
@@ -123,61 +156,85 @@ const Dashboard = ({
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-slate-950 border-b border-slate-800">
-                                            <th className="p-3 font-semibold text-slate-400 text-sm w-12">Page</th>
-                                            <th className="p-3 font-semibold text-slate-400 text-sm w-1/4">Section/Title</th>
-                                            <th className="p-3 font-semibold text-slate-400 text-sm w-1/4">Content</th>
-                                            <th className="p-3 font-semibold text-slate-400 text-sm w-1/3">Summary</th>
+                                            <th className="p-3 font-semibold text-slate-400 text-sm w-16">Page</th>
+                                            <th className="p-3 font-semibold text-slate-400 text-sm w-1/3">Section/Title</th>
+                                            <th className="p-3 font-semibold text-slate-400 text-sm w-1/2">Summary</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-800">
                                         {pages.length > 0 ? (
-                                            pages.map((page) => (
-                                                <tr
-                                                    key={`page-${page.page_number}`}
-                                                    onClick={() => openPdfAtPage(selectedPdf ? selectedPdf.id : metadata?.id, page.page_number)}
-                                                    className="hover:bg-slate-800/50 transition-colors cursor-pointer"
-                                                >
-                                                    <td className="p-3 align-top">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                openPdfAtPage(selectedPdf ? selectedPdf.id : metadata?.id, page.page_number);
-                                                            }}
-                                                            className="text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-all"
+                                            pages.map((page) => {
+                                                const pageSectionSummaries = (sectionSummaries || []).filter(s => s.page_number === page.page_number);
+
+                                                if (pageSectionSummaries.length > 0) {
+                                                    return pageSectionSummaries.map((summary) => (
+                                                        <tr
+                                                            key={`sec-${summary.id || Math.random()}`}
+                                                            onClick={() => openPdfAtPage(selectedPdf ? selectedPdf.id : metadata?.id, page.page_number)}
+                                                            className="hover:bg-slate-800/50 transition-colors cursor-pointer group"
                                                         >
-                                                            {page.page_number}
-                                                        </button>
-                                                    </td>
-                                                    <td className="p-3 text-blue-300 text-sm font-medium align-top">
-                                                        {page.title ? (
-                                                            <span className="flex items-center gap-2">
-                                                                <span className="text-blue-400">📑</span>
-                                                                {page.title}
+                                                            <td className="p-3 align-top">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openPdfAtPage(selectedPdf ? selectedPdf.id : metadata?.id, page.page_number);
+                                                                    }}
+                                                                    className="text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-all"
+                                                                >
+                                                                    {page.page_number}
+                                                                </button>
+                                                            </td>
+                                                            <td className="p-3 text-blue-300 text-sm font-medium align-top">
+                                                                <span className="flex items-start gap-2">
+                                                                    <span className="text-blue-400 mt-1">📑</span>
+                                                                    {summary.section_title}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3 align-top">
+                                                                <ExpandableText text={summary.summary} />
+                                                            </td>
+                                                        </tr>
+                                                    ));
+                                                }
+
+                                                return (
+                                                    <tr
+                                                        key={`page-${page.page_number}`}
+                                                        onClick={() => openPdfAtPage(selectedPdf ? selectedPdf.id : metadata?.id, page.page_number)}
+                                                        className="hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                                                    >
+                                                        <td className="p-3 align-top">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openPdfAtPage(selectedPdf ? selectedPdf.id : metadata?.id, page.page_number);
+                                                                }}
+                                                                className="text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-all"
+                                                            >
+                                                                {page.page_number}
+                                                            </button>
+                                                        </td>
+                                                        <td className="p-3 text-blue-300 text-sm font-medium align-top">
+                                                            <span className="text-slate-500 text-xs italic">
+                                                                {page.title || "No section heading"}
                                                             </span>
-                                                        ) : (
-                                                            <span className="text-slate-500 text-xs italic">No section heading</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-3 text-gray-400 text-xs leading-relaxed align-top font-mono">
-                                                        <div className="max-h-24 overflow-y-auto custom-scrollbar">
-                                                            {page.content ? page.content.substring(0, 200) + (page.content.length > 200 ? '...' : '') : 'Extracting...'}
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-3 text-gray-300 text-xs leading-relaxed align-top">
-                                                        {page.summary ? (
-                                                            <span>{page.summary}</span>
-                                                        ) : (
-                                                            <span className="flex items-center gap-2 text-slate-400">
-                                                                <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-                                                                Generating...
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                        </td>
+                                                        <td className="p-3 align-top">
+                                                            {page.summary ? (
+                                                                <ExpandableText text={page.summary} />
+                                                            ) : (
+                                                                <span className="flex items-center gap-2 text-slate-400 text-xs">
+                                                                    <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                                                                    Generating...
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         ) : (
                                             <tr>
-                                                <td colSpan="4" className="p-6 text-center text-slate-400">
+                                                <td colSpan="3" className="p-6 text-center text-slate-400">
                                                     <p className="text-sm">Waiting for pages...</p>
                                                 </td>
                                             </tr>

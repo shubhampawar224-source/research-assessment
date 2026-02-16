@@ -48,7 +48,7 @@ const RecentUploads = ({
                                     OPEN FULL ANALYSIS
                                 </button>
                                 <div className="space-y-0.5">
-                                    {expandedPdfSections[pdf.id] ? (
+                                    {expandedPdfSections[pdf.id] && (
                                         expandedPdfSections[pdf.id].map((sec, idx) => (
                                             <div
                                                 key={idx}
@@ -73,10 +73,6 @@ const RecentUploads = ({
                                                 )}
                                             </div>
                                         ))
-                                    ) : (
-                                        <div className="p-4 text-center">
-                                            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                                        </div>
                                     )}
                                 </div>
                             </div>
