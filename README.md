@@ -128,9 +128,9 @@ The application uses a sophisticated streaming pipeline to deliver results immed
 *   *Assumption*: Most papers follow standard formatting (Introduction -> Methods -> Results).
 *   *Reasoning*: Regex is near-instant (~0ms), while LLMs take time. We prioritize Regex for 90% of cases and fall back to AI only when necessary, optimizing for both latency and robustness.
 
-### 3. Model Choice (Gemini 2.0 Flash)
+### 3. Model Choice (Gemini 2.0 Flash-Lite)
 **Assumption**: Speed is critical for a "real-time" feel.
-*   *Decision*: We selected **Gemini 2.0 Flash** because it offers the best balance of extremely low latency and high reasoning capability, essential for processing 10-20 pages quickly without making the user wait.
+*   *Decision*: We selected **Gemini 2.0 Flash-Lite** because it offers the best balance of extremely low latency and high reasoning capability, essential for processing 10-20 pages quickly without making the user wait.
 
 ### 4. Database Persistence
 **Assumption**: Users want to revisit past analyses.
@@ -147,7 +147,8 @@ research-paper-summarizer/
 │   └── ...
 └── backend/                  # FastAPI
     ├── api/v1/               # Routes & Logic
-    │   ├── pdf_routes.py     # Main streaming endpoints
+    │   └── pdf_routes.py     # Main streaming endpoints
+    ├── helper/               # Helper Modules
     │   └── process_help.py   # AI & text processing logic
     ├── database.py           # SQLite models
     └── main.py               # Server entry point
