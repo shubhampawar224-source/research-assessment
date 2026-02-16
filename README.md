@@ -71,16 +71,32 @@ An AI-powered web application that automatically summarizes research paper secti
 
    *App will run at `http://localhost:5173`*
 
-### 3️⃣ Docker Setup
-You can also run the entire application using Docker Compose.
+### 3️⃣ Docker Deployment
+Run the entire application in production mode using Docker Compose.
 
-1. Ensure you have Docker and Docker Compose installed.
-2. Create a `.env` file in the root directory (or ensure `backend/.env` exists) with your `GEMINI_API_KEY`.
-3. Run:
+1. **Prerequisites:**
+   - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+2. **Configuration:**
+   - Create a `.env` file in the root directory with your API key:
+     ```env
+     GEMINI_API_KEY=your_actual_api_key_here
+     ```
+
+3. **Start the Application:**
    ```bash
    docker-compose up --build
    ```
-4. Access the app at `http://localhost`.
+   
+4. **Access:**
+   - **Frontend App:** Open `http://localhost:5173`
+   - **Backend API:** Runnable at `http://localhost:8000`
+
+5. **Stop:**
+   - Press `Ctrl+C` in the terminal or run:
+     ```bash
+     docker-compose down
+     ```
 
 ---
 
